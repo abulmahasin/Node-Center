@@ -73,15 +73,25 @@
                                     </h4>
                                     <a href="{{ $app->url }}" target="_blank" style="font-size: 0.75rem; color: #888; text-decoration: none;">{{ $app->url }}</a>
                                     <p style="font-size: 0.8rem; color: #666; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                                        <span class="neo-dot {{ $isOnline ? 'neo-dot-green' : 'neo-dot-red' }}"></span>
                                         {{ $app->type ?? 'General App' }}
                                         
                                         @if(!$isOnline)
-                                            <span class="neo-badge neo-badge-offline">SERVER OFFLINE</span>
+                                            <span class="neo-badge neo-badge-offline">AGENT OFFLINE</span>
                                         @elseif($isAgentStale)
                                             <span class="neo-badge" style="background: var(--butter); color: #854d0e;">AGENT STALE</span>
                                         @else
-                                            <span class="neo-badge neo-badge-online">ONLINE</span>
+                                            <span class="neo-badge neo-badge-online">AGENT ONLINE</span>
+                                        @endif
+                                        
+                                        <!-- Active Ping Status -->
+                                        @if($app->ping_status === 'up')
+                                            <span class="neo-badge" style="background: var(--mint); color: #166534; border-color: #16a34a;" title="Last checked: {{ $app->last_active_ping_at?->diffForHumans() }}">
+                                                <span class="neo-dot neo-dot-green" style="margin-right: 4px;"></span> UP ({{ $app->ping_response_time }}ms)
+                                            </span>
+                                        @elseif($app->ping_status === 'down')
+                                            <span class="neo-badge" style="background: var(--pink); color: #9f1239; border-color: #be123c;" title="Error: {{ $app->ping_error }}">
+                                                <span class="neo-dot neo-dot-red" style="margin-right: 4px;"></span> DOWN
+                                            </span>
                                         @endif
                                     </p>
                                 </div>

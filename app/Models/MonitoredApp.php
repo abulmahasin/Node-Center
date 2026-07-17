@@ -9,6 +9,7 @@ class MonitoredApp extends Model {
     protected $guarded = ['id'];
     protected $casts = [
         'last_ping_at' => 'datetime',
+        'last_active_ping_at' => 'datetime',
     ];
 
     public function user() {

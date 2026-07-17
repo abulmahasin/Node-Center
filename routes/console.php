@@ -9,4 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 // Ping monitored applications every minute
-Schedule::command('dashboard:ping')->everyMinute();
+Schedule::command('apps:ping')->everyMinute();
