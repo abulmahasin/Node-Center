@@ -13,23 +13,36 @@
         <div class="neo-card" style="text-align: center; padding: 3rem;">
             <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📭</div>
             <h3 style="font-weight: 700; margin-bottom: 0.35rem;">No Data Available</h3>
-            <p style="color: #666; font-size: 0.85rem;">This application hasn't sent any metrics in the last 24 hours.</p>
+            <p style="color: #666; font-size: 0.85rem;">This application hasn't sent any metrics for the selected time range.</p>
+            
+            <div style="margin-top: 2rem;">
+                <a href="{{ route('apps.show', ['app' => $app->id, 'range' => '24h']) }}" class="neo-btn neo-btn-sm {{ $range === '24h' ? 'neo-btn-primary' : '' }}">24 Hours</a>
+                <a href="{{ route('apps.show', ['app' => $app->id, 'range' => '7d']) }}" class="neo-btn neo-btn-sm {{ $range === '7d' ? 'neo-btn-primary' : '' }}">7 Days</a>
+                <a href="{{ route('apps.show', ['app' => $app->id, 'range' => '30d']) }}" class="neo-btn neo-btn-sm {{ $range === '30d' ? 'neo-btn-primary' : '' }}">30 Days</a>
+            </div>
         </div>
     @else
+        <!-- Time Range Selector -->
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <a href="{{ route('apps.show', ['app' => $app->id, 'range' => '24h']) }}" class="neo-btn neo-btn-sm" style="{{ $range === '24h' ? 'background: var(--primary);' : 'background: white;' }}">24 Hours</a>
+            <a href="{{ route('apps.show', ['app' => $app->id, 'range' => '7d']) }}" class="neo-btn neo-btn-sm" style="{{ $range === '7d' ? 'background: var(--primary);' : 'background: white;' }}">7 Days</a>
+            <a href="{{ route('apps.show', ['app' => $app->id, 'range' => '30d']) }}" class="neo-btn neo-btn-sm" style="{{ $range === '30d' ? 'background: var(--primary);' : 'background: white;' }}">30 Days</a>
+        </div>
+
         <!-- Stats Summary -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
             <div class="neo-stat">
                 <div class="neo-stat-icon" style="background: var(--lavender);">💻</div>
                 <div>
                     <div class="neo-stat-val">{{ number_format($metrics->last()->cpu_usage) }}%</div>
-                    <div class="neo-stat-label">Current CPU</div>
+                    <div class="neo-stat-label">Latest CPU</div>
                 </div>
             </div>
             <div class="neo-stat">
                 <div class="neo-stat-icon" style="background: var(--mint);">🧠</div>
                 <div>
                     <div class="neo-stat-val">{{ number_format($metrics->last()->memory_usage) }}MB</div>
-                    <div class="neo-stat-label">Current Memory</div>
+                    <div class="neo-stat-label">Latest Memory</div>
                 </div>
             </div>
             <div class="neo-stat">
@@ -41,19 +54,23 @@
             </div>
         </div>
 
+        @php
+            $rangeLabel = $range === '30d' ? '30 Days' : ($range === '7d' ? '7 Days' : '24 Hours');
+        @endphp
+
         <!-- Charts Grid -->
         <div style="display: grid; grid-template-columns: 1fr; gap: 1.25rem;">
             
             <div class="neo-card">
-                <h3 style="font-weight: 700; margin-bottom: 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">💻 CPU & Memory Usage (24h)</h3>
-                <div style="height: 300px; position: relative;">
+                <h3 style="font-weight: 700; margin-bottom: 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">💻 CPU & Memory Usage ({{ $rangeLabel }})</h3>
+                <div style="height: 350px; position: relative;">
                     <canvas id="resourceChart"></canvas>
                 </div>
             </div>
 
             <div class="neo-card">
-                <h3 style="font-weight: 700; margin-bottom: 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">🗄️ Database & Cache Latency (24h)</h3>
-                <div style="height: 300px; position: relative;">
+                <h3 style="font-weight: 700; margin-bottom: 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">🗄️ Database & Cache Latency ({{ $rangeLabel }})</h3>
+                <div style="height: 350px; position: relative;">
                     <canvas id="latencyChart"></canvas>
                 </div>
             </div>
@@ -65,13 +82,17 @@
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Prepare Data
-                const rawMetrics = {!! json_encode($metrics->map(function($m) {
+                const rawMetrics = {!! json_encode($metrics->map(function($m) use ($range) {
+                    $timeFormat = 'H:i';
+                    if ($range === '7d') $timeFormat = 'D H:00';
+                    if ($range === '30d') $timeFormat = 'M d';
+
                     return [
-                        'time' => $m->created_at->format('H:i'),
-                        'cpu' => $m->cpu_usage,
-                        'mem' => $m->memory_usage,
-                        'db' => $m->db_latency,
-                        'cache' => $m->cache_latency,
+                        'time' => $m->created_at->format($timeFormat),
+                        'cpu' => round($m->cpu_usage, 2),
+                        'mem' => round($m->memory_usage, 2),
+                        'db' => round($m->db_latency, 2),
+                        'cache' => round($m->cache_latency, 2),
                         'users' => $m->active_users
                     ];
                 })) !!};
@@ -86,8 +107,8 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     elements: {
-                        line: { borderWidth: 4, tension: 0.3 },
-                        point: { radius: 3, hitRadius: 10, hoverRadius: 6 }
+                        line: { borderWidth: 3, tension: 0.3 },
+                        point: { radius: {{ $range === '24h' ? '3' : '1' }}, hitRadius: 10, hoverRadius: 6 }
                     },
                     plugins: {
                         legend: { position: 'top', labels: { font: { weight: 'bold' } } },
@@ -105,14 +126,16 @@
                                 label: 'CPU Usage (%)',
                                 data: rawMetrics.map(m => m.cpu),
                                 borderColor: '#FFB5C2', // var(--pink)
-                                backgroundColor: '#FFB5C2',
+                                backgroundColor: 'rgba(255, 181, 194, 0.2)',
+                                fill: true,
                                 yAxisID: 'y'
                             },
                             {
                                 label: 'Memory (MB)',
                                 data: rawMetrics.map(m => m.mem),
                                 borderColor: '#89b4fa', // var(--lavender equivalent)
-                                backgroundColor: '#89b4fa',
+                                backgroundColor: 'rgba(137, 180, 250, 0.2)',
+                                fill: true,
                                 yAxisID: 'y1'
                             }
                         ]
@@ -136,13 +159,15 @@
                                 label: 'DB Latency (ms)',
                                 data: rawMetrics.map(m => m.db),
                                 borderColor: '#f59e0b', // amber
-                                backgroundColor: '#f59e0b',
+                                backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                                fill: true
                             },
                             {
                                 label: 'Cache Latency (ms)',
                                 data: rawMetrics.map(m => m.cache),
                                 borderColor: '#10b981', // emerald
-                                backgroundColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                fill: true
                             }
                         ]
                     },

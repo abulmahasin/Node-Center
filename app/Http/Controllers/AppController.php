@@ -14,17 +14,46 @@ class AppController extends Controller
         return view('apps.index', compact('apps'));
     }
 
-    public function show(\App\Models\MonitoredApp $app)
+    public function show(Request $request, \App\Models\MonitoredApp $app)
     {
         if ($app->user_id !== auth()->id()) abort(403);
         
-        // Get metrics from the last 24 hours, ordered by oldest first so chart flows left to right
-        $metrics = $app->metrics()
-            ->where('created_at', '>=', now()->subHours(24))
-            ->orderBy('created_at', 'asc')
-            ->get();
+        $range = $request->query('range', '24h');
+        
+        if ($range === '7d') {
+            $metrics = $app->metrics()
+                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:00:00") as hour, 
+                             AVG(cpu_usage) as cpu_usage, 
+                             AVG(memory_usage) as memory_usage, 
+                             AVG(db_latency) as db_latency, 
+                             AVG(cache_latency) as cache_latency, 
+                             MAX(active_users) as active_users,
+                             MIN(created_at) as created_at')
+                ->where('created_at', '>=', now()->subDays(7))
+                ->groupBy('hour')
+                ->orderByRaw('MIN(created_at) asc')
+                ->get();
+        } elseif ($range === '30d') {
+            $metrics = $app->metrics()
+                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m-%d") as day, 
+                             AVG(cpu_usage) as cpu_usage, 
+                             AVG(memory_usage) as memory_usage, 
+                             AVG(db_latency) as db_latency, 
+                             AVG(cache_latency) as cache_latency, 
+                             MAX(active_users) as active_users,
+                             MIN(created_at) as created_at')
+                ->where('created_at', '>=', now()->subDays(30))
+                ->groupBy('day')
+                ->orderByRaw('MIN(created_at) asc')
+                ->get();
+        } else {
+            $metrics = $app->metrics()
+                ->where('created_at', '>=', now()->subHours(24))
+                ->orderBy('created_at', 'asc')
+                ->get();
+        }
             
-        return view('apps.show', compact('app', 'metrics'));
+        return view('apps.show', compact('app', 'metrics', 'range'));
     }
 
     public function create()
