@@ -77,6 +77,63 @@
 
         </div>
 
+        <!-- Incident History -->
+        <div class="neo-card" style="margin-top: 1.5rem;">
+            <h3 style="font-weight: 700; margin-bottom: 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">📜 Incident History (Downtime)</h3>
+            
+            @if($incidents->isEmpty())
+                <div style="text-align: center; padding: 2rem; color: #16a34a; font-weight: 700;">
+                    🎉 Perfect uptime! No incidents recorded.
+                </div>
+            @else
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+                        <thead>
+                            <tr style="background: var(--bg); border-bottom: 2px solid var(--border);">
+                                <th style="padding: 0.75rem;">Status</th>
+                                <th style="padding: 0.75rem;">Started At</th>
+                                <th style="padding: 0.75rem;">Resolved At</th>
+                                <th style="padding: 0.75rem;">Duration</th>
+                                <th style="padding: 0.75rem;">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($incidents as $incident)
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.75rem;">
+                                        @if(!$incident->resolved_at)
+                                            <span class="neo-badge" style="background: var(--pink); color: #9f1239; animation: pulse 2s infinite;">🔴 ONGOING</span>
+                                        @else
+                                            <span class="neo-badge" style="background: var(--mint); color: #166534;">🟢 RESOLVED</span>
+                                        @endif
+                                    </td>
+                                    <td style="padding: 0.75rem; font-weight: 600;">{{ $incident->started_at->format('M d, Y H:i') }}</td>
+                                    <td style="padding: 0.75rem; font-weight: 600;">
+                                        {{ $incident->resolved_at ? $incident->resolved_at->format('M d, Y H:i') : '-' }}
+                                    </td>
+                                    <td style="padding: 0.75rem; font-family: monospace;">
+                                        @if($incident->resolved_at)
+                                            {{ $incident->started_at->diffForHumans($incident->resolved_at, true) }}
+                                        @else
+                                            {{ $incident->started_at->diffForHumans(null, true) }}...
+                                        @endif
+                                    </td>
+                                    <td style="padding: 0.75rem; color: #dc2626;">{{ $incident->error_message ?? 'Offline' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <style>
+                    @keyframes pulse {
+                        0% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                        100% { opacity: 1; }
+                    }
+                </style>
+            @endif
+        </div>
+
         <!-- Chart.js Setup -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>

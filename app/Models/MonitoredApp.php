@@ -16,6 +16,10 @@ class MonitoredApp extends Model {
         return $this->belongsTo(User::class);
     }
 
+    public function incidents() {
+        return $this->hasMany(AppIncident::class, 'monitored_app_id');
+    }
+
     public function metrics() {
         return $this->hasMany(AppMetric::class);
     }

@@ -52,8 +52,9 @@ class AppController extends Controller
                 ->orderBy('created_at', 'asc')
                 ->get();
         }
+        $incidents = $app->incidents()->latest('started_at')->take(10)->get();
             
-        return view('apps.show', compact('app', 'metrics', 'range'));
+        return view('apps.show', compact('app', 'metrics', 'range', 'incidents'));
     }
 
     public function create()

@@ -43,6 +43,7 @@ class MetricController extends Controller
             'security_warnings' => 'nullable|array',
         ]);
 
+        $app->update(['status' => 'online']);
         $metric = $app->metrics()->create($validated);
 
         return response()->json([
