@@ -76,7 +76,8 @@ DASHBOARD_API_TOKEN="API_TOKEN_YANG_DIDAPAT_DARI_NODE_CENTER"
 ```
 
 ### 3. Pasang Drop-in Command
-Salin file `app/Console/Commands/SendDashboardMetrics.php` ke dalam direktori aplikasi agen Anda. 
+Salin file `agent-script/SendDashboardMetrics.php` dari *repository* ini ke dalam direktori aplikasi agen Anda di jalur `app/Console/Commands/SendDashboardMetrics.php`. 
+*(Catatan: Script ini sudah didesain "kebal" / robust terhadap limitasi keamanan cPanel atau Shared Hosting, sehingga tidak akan memicu fatal error meskipun fungsi pengecekan CPU/Disk diblokir oleh provider hosting).*
 
 Lalu, daftarkan *command* tersebut di `routes/console.php` klien agar berjalan secara otomatis setiap menit:
 ```php
@@ -84,7 +85,7 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('dashboard:send-metrics')->everyMinute();
 ```
-*(Pastikan Anda telah menjalankan `php artisan schedule:work` atau cron job dasar Laravel pada server klien).*
+*(Pastikan Anda telah mendaftarkan Master Cron Job Laravel `* * * * * php artisan schedule:run` di cPanel atau server Anda).*
 
 ---
 
