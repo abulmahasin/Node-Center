@@ -92,7 +92,17 @@
                                             <span class="neo-badge" style="background: var(--pink); color: #9f1239; border-color: #be123c;" title="Error: {{ $app->ping_error }}">
                                                 <span class="neo-dot neo-dot-red" style="margin-right: 4px;"></span> DOWN
                                             </span>
+                                        @else
+                                            <span class="neo-badge" style="background: #e5e7eb; color: #4b5563;">PING: UNKNOWN</span>
                                         @endif
+                                        
+                                        <!-- Manual Ping Button -->
+                                        <form method="POST" action="{{ route('apps.ping', $app->id) }}" style="display:inline;">
+                                            @csrf
+                                            <button type="submit" class="neo-btn neo-btn-sm" style="background: var(--card-alt); padding: 0.15rem 0.5rem; font-size: 0.65rem;" title="Test Ping Now">
+                                                🔄 Ping
+                                            </button>
+                                        </form>
                                     </p>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; align-items: center;">

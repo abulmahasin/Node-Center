@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/apps/{app}', [\App\Http\Controllers\AppController::class, 'update'])->name('apps.update');
     Route::delete('/apps/{app}', [\App\Http\Controllers\AppController::class, 'destroy'])->name('apps.destroy');
     Route::post('/apps/{app}/token', [\App\Http\Controllers\AppController::class, 'generateToken'])->name('apps.token');
+    Route::post('/apps/{app}/ping', [\App\Http\Controllers\AppController::class, 'ping'])->name('apps.ping');
 });
 
 Route::middleware('auth')->group(function () {

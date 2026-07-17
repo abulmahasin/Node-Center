@@ -118,4 +118,13 @@ class AppController extends Controller
         
         return redirect()->route('apps.index')->with('new_token', $token)->with('token_app_id', $app->id);
     }
+
+    public function ping(\App\Models\MonitoredApp $app)
+    {
+        if ($app->user_id !== auth()->id()) abort(403);
+        
+        $app->executePing();
+        
+        return back()->with('success', 'Manual ping executed: ' . ($app->ping_status === 'up' ? 'UP (' . $app->ping_response_time . 'ms)' : 'DOWN (' . $app->ping_error . ')'));
+    }
 }

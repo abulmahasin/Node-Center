@@ -67,8 +67,8 @@
                     </div>
 
                     <!-- Token Confirmation Modal -->
-                    <template x-if="confirmToken">
-                        <div class="neo-modal-overlay" @click.self="confirmToken = false">
+                    <template x-teleport="body">
+                        <div x-show="confirmToken" class="neo-modal-overlay" @click.self="confirmToken = false">
                             <div class="neo-modal">
                                 <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">🔑 Generate API Token</h3>
                                 <p style="font-size: 0.85rem; color: #555; margin-bottom: 1.25rem;">
@@ -86,8 +86,8 @@
                     </template>
 
                     <!-- Delete Confirmation Modal -->
-                    <template x-if="confirmDelete">
-                        <div class="neo-modal-overlay" @click.self="confirmDelete = false">
+                    <template x-teleport="body">
+                        <div x-show="confirmDelete" class="neo-modal-overlay" @click.self="confirmDelete = false">
                             <div class="neo-modal">
                                 <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">🗑️ Delete Application</h3>
                                 <p style="font-size: 0.85rem; color: #555; margin-bottom: 1.25rem;">
