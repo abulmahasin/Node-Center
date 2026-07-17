@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Node Center — App Monitor</title>
+    <link rel="icon" type="image/png" href="/logo.png">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=space-grotesk:400,500,600,700,800&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -18,7 +19,9 @@
     <!-- Nav -->
     <nav style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2rem; border-bottom: 3px solid #2D2D2D; background: white;">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="background: #FFF3B0; border: 2px solid #2D2D2D; border-radius: 0.5rem; padding: 0.3rem 0.6rem; font-weight: 700; box-shadow: 2px 2px 0 #2D2D2D;">📡</span>
+            <div style="background: white; border: 2px solid #2D2D2D; border-radius: 0.5rem; padding: 0.2rem; box-shadow: 2px 2px 0 #2D2D2D; display: flex; align-items: center; justify-content: center;">
+                <img src="/logo.png" alt="Logo" style="width: 24px; height: 24px; object-fit: contain;">
+            </div>
             <span style="font-size: 1.1rem; font-weight: 700;">Node Center</span>
         </div>
         @if (Route::has('login'))

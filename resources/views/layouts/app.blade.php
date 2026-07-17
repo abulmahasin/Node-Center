@@ -8,6 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Node Center') }}</title>
+    <link rel="icon" type="image/png" href="/logo.png">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=space-grotesk:400,500,600,700&display=swap" rel="stylesheet" />
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -249,9 +250,12 @@
     </button>
 
     <aside class="neo-sidebar" :class="{ 'open': sidebarOpen }">
-        <div class="neo-sidebar-brand">
-            <h1>📡 Node Center</h1>
-            <p>App Monitor</p>
+        <div class="neo-sidebar-brand" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <img src="/logo.png" alt="Logo" style="width: 28px; height: 28px; object-fit: contain;">
+                <h1 style="margin: 0;">Node Center</h1>
+            </div>
+            <p style="margin: 0;">App Monitor</p>
         </div>
         <nav class="neo-sidebar-nav">
             <a href="{{ route('dashboard') }}" class="neo-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">

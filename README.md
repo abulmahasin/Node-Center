@@ -1,58 +1,98 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="public/logo.png" width="100" alt="Node Center Logo">
 </p>
 
-## About Laravel
+<h1 align="center">Node Center - Application Monitoring Dashboard</h1>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<p align="center">
+  Sebuah dashboard pemantauan aplikasi (Application Monitoring) berbasis Laravel 11 dengan antarmuka <strong>Neo-Brutalist</strong> modern. Dibuat khusus untuk mengawasi berbagai aplikasi Laravel secara terpusat, langsung (real-time), dan aman.
+</p>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## ✨ Fitur Utama
 
-## Learning Laravel
+- **Real-time Metrics (Push & Pull):** Menerima data secara instan dari aplikasi agen, sekaligus melakukan *Active Ping* ke server target untuk membedakan antara *Server Offline* dan *Agent Stale* (Cron Macet).
+- **Historical Analytics (Chart.js):** Lacak penggunaan CPU, Memory, DB Latency, dan Cache Latency selama 24 jam terakhir dalam grafik interaktif yang indah.
+- **Environment Security Scanner:** Secara otomatis memindai konfigurasi `.env` agen target untuk mendeteksi kerentanan kritis (seperti `APP_DEBUG=true` di tahap *Production* atau kunci rahasia yang kosong).
+- **Slow Query & Error Catcher:** Menangkap log *Slow Queries* dan *Exceptions* dari file `laravel.log` agen target, menampilkannya dalam format *modal* yang mudah dibaca.
+- **Queue & Schedule Tracker:** Memantau status *Pending Jobs*, *Failed Jobs*, dan *Scheduled Tasks (Cron)* dari jarak jauh.
+- **Global Dark Mode:** Tema *Dark Mode* elegan dengan penyimpanan preferensi di *browser* (LocalStorage) menggunakan Alpine.js.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🚀 Instalasi Dashboard (Node Center)
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+1. **Clone & Install Dependencies**
+   ```bash
+   git clone <repo-url> node-center
+   cd node-center
+   composer install
+   npm install && npm run build
+   ```
 
-## Agentic Development
+2. **Konfigurasi Lingkungan (.env)**
+   Salin file `.env.example` ke `.env` dan atur koneksi database Anda.
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+3. **Migrasi Database**
+   ```bash
+   php artisan migrate:fresh
+   ```
 
-```bash
-composer require laravel/boost --dev
+4. **Jalankan Scheduler & Server**
+   Untuk mengaktifkan fitur *Active Ping*, jalankan Laravel Scheduler di server Dashboard:
+   ```bash
+   # Di background terminal atau crontab server
+   php artisan schedule:work
+   
+   # Jalankan server
+   php artisan serve
+   ```
 
-php artisan boost:install
+---
+
+## 🔌 Cara Menyambungkan Aplikasi Target (Klien)
+
+Untuk menyambungkan aplikasi Laravel Anda (contoh: SISMA-AKA) ke **Node Center**, ikuti langkah berikut:
+
+### 1. Daftarkan Aplikasi di Node Center
+1. Login ke **Node Center**.
+2. Masuk ke menu **My Apps** > **Register App**.
+3. Masukkan Nama (Misal: "SISMA-AKA") dan URL Root aplikasi (Misal: `http://127.0.0.1:8001`).
+4. Klik simpan. Anda akan mendapatkan **API Token** rahasia.
+
+### 2. Konfigurasi Agen (Klien)
+Pada aplikasi target (Klien), tambahkan baris berikut di akhir file `.env` Anda:
+```env
+# Konfigurasi Dashboard Monitor API
+DASHBOARD_MONITOR_URL="http://127.0.0.1:8000"
+DASHBOARD_API_TOKEN="API_TOKEN_YANG_DIDAPAT_DARI_NODE_CENTER"
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 3. Pasang Drop-in Command
+Salin file `app/Console/Commands/SendDashboardMetrics.php` ke dalam direktori aplikasi agen Anda. 
 
-## Contributing
+Lalu, daftarkan *command* tersebut di `routes/console.php` klien agar berjalan secara otomatis setiap menit:
+```php
+use Illuminate\Support\Facades\Schedule;
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Schedule::command('dashboard:send-metrics')->everyMinute();
+```
+*(Pastikan Anda telah menjalankan `php artisan schedule:work` atau cron job dasar Laravel pada server klien).*
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 🛡️ Membaca Status Monitoring
 
-## Security Vulnerabilities
+Pada kartu aplikasi di dashboard, Anda akan melihat berbagai indikator:
+- 🟢 **ONLINE**: Server hidup dan *cron* berjalan normal.
+- 🟡 **AGENT STALE**: Server hidup, tetapi *cron* mati (tidak ada metrik terkirim dalam 5 menit terakhir).
+- 🔴 **SERVER OFFLINE**: Server target sama sekali tidak bisa dijangkau oleh *Ping*.
+- 🛡️ **WARNING**: Ditemukan kerentanan di `.env` target. Klik logo tameng merah untuk melihat detailnya.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+**Node Center** &copy; 2026. *Built for professionals.*

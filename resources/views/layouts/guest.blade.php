@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>{{ config('app.name', 'Node Center') }}</title>
+        <link rel="icon" type="image/png" href="/logo.png">
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=space-grotesk:400,500,600,700&display=swap" rel="stylesheet" />
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -31,7 +32,7 @@
             <div style="margin-bottom: 2rem; text-align: center;">
                 <a href="/" style="text-decoration: none;">
                     <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--butter); border: 3px solid var(--border); border-radius: 1rem; padding: 0.75rem 1.25rem; box-shadow: var(--shadow); font-size: 1.25rem; font-weight: 700; color: var(--text);">
-                        📡 Node Center
+                        <img src="/logo.png" alt="Logo" style="width: 28px; height: 28px; object-fit: contain;"> Node Center
                     </div>
                 </a>
             </div>
