@@ -7,4 +7,4 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::post('/metrics', [\App\Http\Controllers\Api\MetricController::class, 'store']);
+Route::post('/metrics', [\App\Http\Controllers\Api\MetricController::class, 'store'])->middleware('throttle:60,1');

@@ -2,7 +2,7 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 class AppMetric extends Model {
-    protected $guarded = [];
+    protected $guarded = ['id'];
     protected $casts = [
         'error_details' => 'array',
         'queue_details' => 'array',

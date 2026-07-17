@@ -8,7 +8,7 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    $apps = \App\Models\MonitoredApp::with(['metrics' => function($q) {
+    $apps = auth()->user()->apps()->with(['metrics' => function($q) {
         $q->latest()->take(10);
     }])->get();
     return view('dashboard', compact('apps'));

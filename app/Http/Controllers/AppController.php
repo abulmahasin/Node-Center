@@ -8,7 +8,7 @@ class AppController extends Controller
 {
     public function index()
     {
-        $apps = \App\Models\MonitoredApp::with(['metrics' => function($q) {
+        $apps = auth()->user()->apps()->with(['metrics' => function($q) {
             $q->latest()->take(1);
         }])->get();
         return view('apps.index', compact('apps'));
@@ -16,6 +16,8 @@ class AppController extends Controller
 
     public function show(\App\Models\MonitoredApp $app)
     {
+        if ($app->user_id !== auth()->id()) abort(403);
+        
         // Get metrics from the last 24 hours, ordered by oldest first so chart flows left to right
         $metrics = $app->metrics()
             ->where('created_at', '>=', now()->subHours(24))
@@ -38,18 +40,21 @@ class AppController extends Controller
             'type' => 'nullable|string|max:50',
         ]);
 
-        \App\Models\MonitoredApp::create($validated);
+        auth()->user()->apps()->create($validated);
 
         return redirect()->route('apps.index')->with('success', 'Application registered successfully.');
     }
 
     public function edit(\App\Models\MonitoredApp $app)
     {
+        if ($app->user_id !== auth()->id()) abort(403);
         return view('apps.edit', compact('app'));
     }
 
     public function update(Request $request, \App\Models\MonitoredApp $app)
     {
+        if ($app->user_id !== auth()->id()) abort(403);
+        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'url' => 'required|url|max:255',
@@ -63,6 +68,8 @@ class AppController extends Controller
 
     public function destroy(\App\Models\MonitoredApp $app)
     {
+        if ($app->user_id !== auth()->id()) abort(403);
+        
         $app->metrics()->delete();
         $app->tokens()->delete();
         $app->delete();
@@ -72,6 +79,8 @@ class AppController extends Controller
 
     public function generateToken(\App\Models\MonitoredApp $app)
     {
+        if ($app->user_id !== auth()->id()) abort(403);
+        
         // Delete old tokens to keep it simple (one token per app)
         $app->tokens()->delete();
         
