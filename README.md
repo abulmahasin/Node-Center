@@ -13,11 +13,13 @@
 ## ✨ Fitur Utama
 
 - **Real-time Metrics (Push & Pull):** Menerima data secara instan dari aplikasi agen, sekaligus melakukan *Active Ping* ke server target untuk membedakan antara *Server Offline* dan *Agent Stale* (Cron Macet).
-- **Historical Analytics (Chart.js):** Lacak penggunaan CPU, Memory, DB Latency, dan Cache Latency selama 24 jam terakhir dalam grafik interaktif yang indah.
+- **Incident History (Downtime Logs):** Secara otomatis mencatat setiap kali aplikasi mengalami *downtime*, menghitung durasi *offline*, dan menyimpan pesan *error*-nya (misal: HTTP 502, Timeout).
+- **Manual Ping Tester:** Tombol uji coba Ping manual secara langsung dari Dashboard tanpa harus menunggu *scheduler*.
+- **Historical Analytics (Chart.js):** Lacak penggunaan CPU, Memory, DB Latency, dan Cache Latency selama 24 Jam, 7 Hari, dan 30 Hari terakhir dalam grafik interaktif.
+- **Multi-Tenancy Security:** Mendukung banyak *user* di mana setiap *user* hanya dapat melihat, mengedit, dan memantau aplikasinya sendiri (berbasis *User-ID isolation*).
 - **Environment Security Scanner:** Secara otomatis memindai konfigurasi `.env` agen target untuk mendeteksi kerentanan kritis (seperti `APP_DEBUG=true` di tahap *Production* atau kunci rahasia yang kosong).
-- **Slow Query & Error Catcher:** Menangkap log *Slow Queries* dan *Exceptions* dari file `laravel.log` agen target, menampilkannya dalam format *modal* yang mudah dibaca.
+- **Slow Query & Error Catcher:** Menangkap log *Slow Queries* dan *Exceptions* dari file `laravel.log` agen target.
 - **Queue & Schedule Tracker:** Memantau status *Pending Jobs*, *Failed Jobs*, dan *Scheduled Tasks (Cron)* dari jarak jauh.
-- **Global Dark Mode:** Tema *Dark Mode* elegan dengan penyimpanan preferensi di *browser* (LocalStorage) menggunakan Alpine.js.
 
 ---
 
@@ -44,7 +46,7 @@
    ```
 
 4. **Jalankan Scheduler & Server**
-   Untuk mengaktifkan fitur *Active Ping*, jalankan Laravel Scheduler di server Dashboard:
+   Untuk mengaktifkan fitur pencatatan otomatis insiden (*Active Ping & Incident History*), jalankan Laravel Scheduler di server Dashboard:
    ```bash
    # Di background terminal atau crontab server
    php artisan schedule:work
@@ -61,7 +63,7 @@ Untuk menyambungkan aplikasi Laravel Anda (contoh: SISMA-AKA) ke **Node Center**
 
 ### 1. Daftarkan Aplikasi di Node Center
 1. Login ke **Node Center**.
-2. Masuk ke menu **My Apps** > **Register App**.
+2. Masuk ke menu **My Apps** > **+ New App**.
 3. Masukkan Nama (Misal: "SISMA-AKA") dan URL Root aplikasi (Misal: `http://127.0.0.1:8001`).
 4. Klik simpan. Anda akan mendapatkan **API Token** rahasia.
 
@@ -88,11 +90,12 @@ Schedule::command('dashboard:send-metrics')->everyMinute();
 
 ## 🛡️ Membaca Status Monitoring
 
-Pada kartu aplikasi di dashboard, Anda akan melihat berbagai indikator:
-- 🟢 **ONLINE**: Server hidup dan *cron* berjalan normal.
-- 🟡 **AGENT STALE**: Server hidup, tetapi *cron* mati (tidak ada metrik terkirim dalam 5 menit terakhir).
-- 🔴 **SERVER OFFLINE**: Server target sama sekali tidak bisa dijangkau oleh *Ping*.
-- 🛡️ **WARNING**: Ditemukan kerentanan di `.env` target. Klik logo tameng merah untuk melihat detailnya.
+Pada dashboard, Anda akan melihat indikator berikut:
+- 🟢 **UP** (Ping Status): Server merespons ping HTTP dengan sukses (Status 200/300).
+- 🔴 **DOWN** (Ping Status): Server tidak merespons (Timout / 500+). Ini otomatis akan memicu pencatatan **Incident History**.
+- 🟢 **AGENT ONLINE**: Agen berhasil mengirim metrik CPU/Memory kurang dari 5 menit yang lalu.
+- 🟡 **PING: UNKNOWN / AGENT STALE**: Menandakan konektivitas agen sedang bermasalah atau belum pernah terhubung.
+- 🛡️ **WARNING (Shield Merah)**: Ditemukan kerentanan di `.env` aplikasi klien target. Klik logo tameng merah untuk melihat detailnya.
 
 ---
 **Node Center** &copy; 2026. *Built for professionals.*
