@@ -202,9 +202,9 @@
 
     <!-- Nav -->
     <nav class="navbar">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-            <img src="/logo.png" alt="Logo" style="width: 44px; height: 44px; object-fit: contain;">
-            <span style="font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px;">Node Center</span>
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+            <img src="/logo.png" alt="Logo" style="width: 80px; height: 80px; object-fit: contain;">
+            <span style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px;">Node Center</span>
         </div>
         
         <div style="display: flex; gap: 1rem;">
