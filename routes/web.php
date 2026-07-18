@@ -28,6 +28,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/apps/{app}', [\App\Http\Controllers\AppController::class, 'destroy'])->name('apps.destroy');
     Route::post('/apps/{app}/token', [\App\Http\Controllers\AppController::class, 'generateToken'])->name('apps.token');
     Route::post('/apps/{app}/ping', [\App\Http\Controllers\AppController::class, 'ping'])->name('apps.ping');
+
+    // Settings & Alert Logs
+    Route::get('/settings', [\App\Http\Controllers\SettingController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [\App\Http\Controllers\SettingController::class, 'update'])->name('settings.update');
+    Route::post('/settings/test-telegram', [\App\Http\Controllers\SettingController::class, 'testTelegram'])->name('settings.test-telegram');
 });
 
 Route::middleware('auth')->group(function () {

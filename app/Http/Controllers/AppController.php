@@ -89,6 +89,8 @@ class AppController extends Controller
             'name' => 'required|string|max:255',
             'url' => 'required|url|max:255',
             'type' => 'nullable|string|max:50',
+            'telegram_chat_id' => 'nullable|string|max:100',
+            'alert_email' => 'nullable|email|max:255',
         ]);
 
         $app->update($validated);

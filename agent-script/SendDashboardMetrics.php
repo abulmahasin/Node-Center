@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 class SendDashboardMetrics extends Command
 {
     protected $signature = 'dashboard:send-metrics';
-    protected $description = 'Send system metrics to Dashboard Monitor';
+    protected $description = 'Send system metrics to Node Center Dashboard';
 
     public function handle()
     {
@@ -17,8 +18,9 @@ class SendDashboardMetrics extends Command
         try { DB::connection()->getPdo(); } catch (\Exception $e) {}
         $dbLatency = round((microtime(true) - $dbStart) * 1000);
 
-        $diskTotal = disk_total_space(base_path());
-        $diskFree  = disk_free_space(base_path());
+        // Pencegahan error jika fungsi diblokir cPanel
+        $diskTotal = @disk_total_space(base_path()) ?: 1; 
+        $diskFree  = @disk_free_space(base_path()) ?: 0;
 
         $pendingJobs = 0;
         $failedJobs = 0;
@@ -27,52 +29,43 @@ class SendDashboardMetrics extends Command
             $pendingJobs = DB::table('jobs')->count();
             $failedJobs = DB::table('failed_jobs')->count();
             
-            // Ambil 5 job pending tertua
-            $queueDetails['pending'] = DB::table('jobs')->select('id', 'queue', 'payload', 'created_at')->limit(5)->get()->map(function($j) {
-                $payload = json_decode($j->payload, true);
-                return [
-                    'id' => $j->id,
-                    'queue' => $j->queue,
-                    'name' => $payload['displayName'] ?? 'Unknown Job',
-                    'created_at' => date('Y-m-d H:i:s', $j->created_at)
-                ];
-            });
-            // Ambil 5 job gagal terbaru
             $queueDetails['pending'] = DB::table('jobs')->select('id', 'queue', 'payload', 'created_at')->limit(5)->get()->toArray();
             $queueDetails['failed'] = DB::table('failed_jobs')->select('id', 'queue', 'payload', 'failed_at')->limit(5)->get()->toArray();
         } catch (\Exception $e) {}
 
-        // Log Analyzer (Error & Slow Queries)
+        // Log Analyzer (Error & Slow Queries) yang kebal dari shell_exec blocked
         $errorCount = 0;
         $errorDetails = [];
         $slowQueries = [];
         $logPath = storage_path('logs/laravel.log');
         
         if (file_exists($logPath)) {
-            $logContent = file_get_contents($logPath);
-            // Cari error
-            preg_match_all('/\[.*?\] .*?ERROR: (.*)/', $logContent, $matches);
-            $errorCount = count($matches[0]);
-            $errorDetails = array_slice($matches[1], -5); // Ambil 5 error terakhir
-            
-            // Cari slow query
-            preg_match_all('/\[.*?\] .*?Slow query detected: (.*)/', $logContent, $slowMatches);
-            $slowQueries = array_slice($slowMatches[1], -5);
+            $logContent = @file_get_contents($logPath);
+            if ($logContent) {
+                preg_match_all('/\[.*?\] .*?ERROR: (.*)/', $logContent, $matches);
+                $errorCount = count($matches[0]);
+                $errorDetails = array_slice($matches[1], -5);
+                
+                preg_match_all('/\[.*?\] .*?Slow query detected: (.*)/', $logContent, $slowMatches);
+                $slowQueries = array_slice($slowMatches[1], -5);
+            }
         }
         
         // Security Checker (.env scan)
         $securityWarnings = [];
         $envPath = base_path('.env');
         if (file_exists($envPath)) {
-            $envContent = file_get_contents($envPath);
-            if (!str_contains($envContent, 'APP_KEY=base64:')) {
-                $securityWarnings[] = 'APP_KEY is missing or not a valid base64 string.';
-            }
-            if (str_contains($envContent, 'APP_DEBUG=true') && config('app.env') === 'production') {
-                $securityWarnings[] = 'CRITICAL: APP_DEBUG is true in production environment!';
-            }
-            if (str_contains($envContent, 'DB_PASSWORD=') && !preg_match('/DB_PASSWORD=.+/', $envContent) && config('app.env') === 'production') {
-                $securityWarnings[] = 'WARNING: Database password appears to be empty in production.';
+            $envContent = @file_get_contents($envPath);
+            if ($envContent) {
+                if (!str_contains($envContent, 'APP_KEY=base64:')) {
+                    $securityWarnings[] = 'APP_KEY is missing or not a valid base64 string.';
+                }
+                if (str_contains($envContent, 'APP_DEBUG=true') && config('app.env') === 'production') {
+                    $securityWarnings[] = 'CRITICAL: APP_DEBUG is true in production environment!';
+                }
+                if (str_contains($envContent, 'DB_PASSWORD=') && !preg_match('/DB_PASSWORD=.+/', $envContent) && config('app.env') === 'production') {
+                    $securityWarnings[] = 'WARNING: Database password appears to be empty in production.';
+                }
             }
         }
 
@@ -84,7 +77,6 @@ class SendDashboardMetrics extends Command
             $cacheLatency = null;
         }
 
-        // Ekstrak Scheduled Tasks
         $scheduleDetails = [];
         try {
             $schedule = app(\Illuminate\Console\Scheduling\Schedule::class);
@@ -98,6 +90,7 @@ class SendDashboardMetrics extends Command
             }
         } catch (\Exception $e) {}
 
+        // Pencegahan fatal error sys_getloadavg di cPanel
         $cpuUsage = 0;
         if (function_exists('sys_getloadavg') && is_array(sys_getloadavg())) {
             $cpuUsage = sys_getloadavg()[0] * 10;
