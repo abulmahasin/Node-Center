@@ -196,6 +196,55 @@
             transform: rotate(2deg);
         }
 
+        /* creator badge */
+        .creator-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: white;
+            padding: 0.6rem 1.8rem 0.6rem 1.5rem;
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0 #000;
+            font-weight: 700;
+            font-size: 1rem;
+            transform: rotate(1deg);
+            margin-top: 2.5rem;
+        }
+        .creator-badge a {
+            color: #000;
+            text-decoration: none;
+            font-weight: 800;
+            border-bottom: 3px solid var(--secondary);
+            transition: 0.2s;
+        }
+        .creator-badge a:hover {
+            background: var(--secondary);
+            padding: 0.1rem 0.3rem;
+        }
+        .creator-badge img {
+            width: 28px;
+            height: 28px;
+            filter: drop-shadow(2px 2px 0 #000);
+        }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin: 1.5rem 0 1rem;
+        }
+        .footer-links a {
+            font-weight: 700;
+            color: #000;
+            text-decoration: none;
+            border-bottom: 4px solid var(--secondary);
+            padding: 0.2rem 0.4rem;
+            transition: 0.2s;
+        }
+        .footer-links a:hover {
+            background: var(--secondary);
+            border-color: #000;
+        }
     </style>
 </head>
 <body>
@@ -259,6 +308,19 @@
                 </a>
             @endauth
         </div>
+
+        <!-- CREATOR BADGE (Abul Mahasin + LinkedIn + GitHub) -->
+        <div class="creator-badge">
+            <span>🛠️ Developed by</span>
+            <a href="https://www.linkedin.com/in/abulmahasin/" target="_blank" rel="noopener noreferrer">
+                Abul Mahasin
+            </a>
+            <span style="opacity:0.4; margin:0 0.2rem;">|</span>
+            <a href="https://github.com/abulmahasin" target="_blank" rel="noopener noreferrer">
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/github.svg" alt="GitHub" style="width:28px; height:28px; filter: drop-shadow(2px 2px 0 #000); vertical-align: middle;">
+                GitHub
+            </a>
+        </div>
     </main>
 
     <!-- Marquee -->
@@ -297,7 +359,23 @@
             <img src="/logo.png" alt="Logo" style="width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(4px 4px 0 var(--border-color));">
             <span style="font-size: 2rem; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">Node Center</span>
         </div>
-        <p style="color: var(--text-main); font-size: 1rem; font-weight: 600;">&copy; {{ date('Y') }} Node Center Monitor. Engineered for reliability.</p>
+
+        <!-- FOOTER LINKS: LinkedIn & GitHub (Abul Mahasin) -->
+        <div class="footer-links">
+            <a href="https://www.linkedin.com/in/abulmahasin/" target="_blank" rel="noopener noreferrer">
+                 LinkedIn / Abul Mahasin
+            </a>
+            <a href="https://github.com/abulmahasin" target="_blank" rel="noopener noreferrer">
+                 GitHub / abulmahasin
+            </a>
+        </div>
+
+        <p style="color: var(--text-main); font-size: 1rem; font-weight: 600; margin-top: 1.5rem;">
+            &copy; {{ date('Y') }} Node Center Monitor. Engineered for reliability.
+        </p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem; font-weight: 500; opacity: 0.7;">
+            <span style="background: var(--tertiary); padding: 0.1rem 0.8rem; border: 2px solid #000;">Developed by oleh Abul Mahasin</span>
+        </p>
     </footer>
 
 </body>

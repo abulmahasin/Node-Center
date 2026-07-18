@@ -113,11 +113,11 @@
                                             @if($daysLeft < 0)
                                                 <span class="neo-badge" style="background: var(--pink); color: #9f1239; border-color: #be123c;" title="SSL Expired: {{ $sslExpiry->format('d M Y') }}">🔒 EXPIRED</span>
                                             @elseif($daysLeft <= 7)
-                                                <span class="neo-badge" style="background: var(--butter); color: #854d0e; border-color: #ca8a04;" title="SSL Expiring: {{ $sslExpiry->format('d M Y') }}">🔒 {{ $daysLeft }} hari lagi!</span>
+                                                <span class="neo-badge" style="background: var(--butter); color: #854d0e; border-color: #ca8a04;" title="SSL Expiring: {{ $sslExpiry->format('d M Y') }}">🔒 SSL : {{ $daysLeft }} days left!</span>
                                             @elseif($daysLeft <= 30)
-                                                <span class="neo-badge" style="background: var(--butter); color: #854d0e; border-color: #ca8a04;" title="SSL Valid: {{ $sslExpiry->format('d M Y') }} ({{ $app->ssl_issuer }})">🔒 {{ $daysLeft }} hari</span>
+                                                <span class="neo-badge" style="background: var(--butter); color: #854d0e; border-color: #ca8a04;" title="SSL Valid: {{ $sslExpiry->format('d M Y') }} ({{ $app->ssl_issuer }})">🔒 SSL : {{ $daysLeft }} days</span>
                                             @else
-                                                <span class="neo-badge" style="background: var(--mint); color: #166534; border-color: #16a34a;" title="SSL Valid: {{ $sslExpiry->format('d M Y') }} ({{ $app->ssl_issuer }})">🔒 {{ $daysLeft }} hari</span>
+                                                <span class="neo-badge" style="background: var(--mint); color: #166534; border-color: #16a34a;" title="SSL Valid: {{ $sslExpiry->format('d M Y') }} ({{ $app->ssl_issuer }})">🔒 SSL : {{ $daysLeft }} days</span>
                                             @endif
                                         @endif
                                     </p>
