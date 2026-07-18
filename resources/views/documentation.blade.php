@@ -83,84 +83,106 @@
                 Instead of cluttering your code, simply create a dedicated Console Command. Follow these two easy steps:
             </p>
             
-            <h4 style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem;">1. Create the Command</h4>
-            <p style="font-size: 0.8rem; color: #555; margin-bottom: 0.5rem;">Run this in your terminal to generate the file:</p>
-            <div class="neo-code" style="margin-bottom: 1rem;">
-<span class="kw">php</span> artisan make:command SendDashboardMetrics</div>
+            @php
+                $envExample = <<<'ENV'
+DASHBOARD_API_TOKEN=your-api-token-here
+DASHBOARD_MONITOR_URL=https://your-dashboard-domain.com
+ENV;
 
-            <p style="font-size: 0.8rem; color: #555; margin-bottom: 0.5rem;">Then, paste this code into <code style="background: var(--butter); padding: 0.1rem 0.4rem; border-radius: 0.25rem; border: 1px solid var(--border); font-size: 0.75rem;">app/Console/Commands/SendDashboardMetrics.php</code>:</p>
-            
-            <div class="neo-code" style="max-height: 250px; overflow-y: auto; margin-bottom: 1rem;">
-<span class="kw">&lt;?php</span>
-<span class="kw">namespace</span> App\Console\Commands;
+                $commandExample = <<<'PHP'
+<?php
 
-<span class="kw">use</span> Illuminate\Console\Command;
-<span class="kw">use</span> Illuminate\Support\Facades\Http;
-<span class="kw">use</span> Illuminate\Support\Facades\DB;
-<span class="kw">use</span> Illuminate\Support\Facades\Cache;
+namespace App\Console\Commands;
 
-<span class="kw">class</span> <span class="fn">SendDashboardMetrics</span> <span class="kw">extends</span> Command
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+
+class SendDashboardMetrics extends Command
 {
-    <span class="kw">protected</span> <span class="var">$signature</span> = <span class="str">'dashboard:send-metrics'</span>;
-    <span class="kw">protected</span> <span class="var">$description</span> = <span class="str">'Send system metrics to Dashboard Monitor'</span>;
+    protected $signature = 'dashboard:send-metrics';
+    protected $description = 'Send application metrics to the dashboard';
 
-    <span class="kw">public function</span> <span class="fn">handle</span>()
+    public function handle(): int
     {
-        <span class="var">$dbStart</span> = <span class="fn">microtime</span>(<span class="kw">true</span>);
-        <span class="kw">try</span> { DB::<span class="fn">connection</span>()-><span class="fn">getPdo</span>(); } <span class="kw">catch</span> (\Exception <span class="var">$e</span>) {}
-        <span class="var">$dbLatency</span> = <span class="fn">round</span>((<span class="fn">microtime</span>(<span class="kw">true</span>) - <span class="var">$dbStart</span>) * <span class="var">1000</span>);
-
-        <span class="var">$diskTotal</span> = <span class="fn">disk_total_space</span>(<span class="fn">base_path</span>());
-        <span class="var">$diskFree</span>  = <span class="fn">disk_free_space</span>(<span class="fn">base_path</span>());
-
-        <span class="var">$pendingJobs</span> = <span class="var">0</span>;
-        <span class="var">$failedJobs</span> = <span class="var">0</span>;
-        <span class="kw">try</span> {
-            <span class="var">$pendingJobs</span> = DB::<span class="fn">table</span>(<span class="str">'jobs'</span>)-><span class="fn">count</span>();
-            <span class="var">$failedJobs</span> = DB::<span class="fn">table</span>(<span class="str">'failed_jobs'</span>)-><span class="fn">count</span>();
-        } <span class="kw">catch</span> (\Exception <span class="var">$e</span>) {}
-
-        <span class="var">$errorCount</span> = <span class="var">0</span>;
-        <span class="var">$logFile</span> = <span class="fn">storage_path</span>(<span class="str">'logs/laravel.log'</span>);
-        <span class="kw">if</span> (<span class="fn">file_exists</span>(<span class="var">$logFile</span>)) {
-            <span class="var">$recentLogs</span> = <span class="fn">shell_exec</span>(<span class="str">'tail -n 300 '</span> . <span class="fn">escapeshellarg</span>(<span class="var">$logFile</span>));
-            <span class="var">$errorCount</span> = <span class="fn">substr_count</span>(<span class="var">$recentLogs</span> ?? <span class="str">''</span>, <span class="str">'local.ERROR'</span>);
+        $dbStart = microtime(true);
+        try {
+            DB::connection()->getPdo();
+            $dbLatency = round((microtime(true) - $dbStart) * 1000);
+        } catch (\Throwable $e) {
+            $dbLatency = 0;
         }
 
-        <span class="var">$cacheStart</span> = <span class="fn">microtime</span>(<span class="kw">true</span>);
-        <span class="kw">try</span> {
-            Cache::<span class="fn">has</span>(<span class="str">'ping'</span>);
-            <span class="var">$cacheLatency</span> = <span class="fn">round</span>((<span class="fn">microtime</span>(<span class="kw">true</span>) - <span class="var">$cacheStart</span>) * <span class="var">1000</span>);
-        } <span class="kw">catch</span> (\Exception <span class="var">$e</span>) {
-            <span class="var">$cacheLatency</span> = <span class="kw">null</span>;
+        $diskTotal = disk_total_space(base_path());
+        $diskFree = disk_free_space(base_path());
+
+        $pendingJobs = 0;
+        $failedJobs = 0;
+        try {
+            $pendingJobs = DB::table('jobs')->count();
+            $failedJobs = DB::table('failed_jobs')->count();
+        } catch (\Throwable $e) {
+            // ignore when tables are unavailable
         }
 
-        <span class="var">$metrics</span> = [
-            <span class="str">'cpu_usage'</span>       => <span class="fn">sys_getloadavg</span>()[<span class="var">0</span>] * <span class="var">10</span>,
-            <span class="str">'memory_usage'</span>    => <span class="fn">round</span>(<span class="fn">memory_get_usage</span>(<span class="kw">true</span>) / <span class="var">1048576</span>, <span class="var">1</span>),
-            <span class="str">'disk_usage'</span>      => <span class="fn">round</span>(((<span class="var">$diskTotal</span> - <span class="var">$diskFree</span>) / <span class="var">$diskTotal</span>) * <span class="var">100</span>, <span class="var">1</span>),
-            <span class="str">'active_users'</span>    => \App\Models\User::<span class="fn">count</span>(),
-            <span class="str">'db_latency'</span>      => <span class="var">$dbLatency</span>,
-            <span class="str">'cache_latency'</span>   => <span class="var">$cacheLatency</span>,
-            <span class="str">'pending_jobs'</span>    => <span class="var">$pendingJobs</span>,
-            <span class="str">'failed_jobs'</span>     => <span class="var">$failedJobs</span>,
-            <span class="str">'error_count'</span>     => <span class="var">$errorCount</span>,
-            <span class="str">'php_version'</span>     => <span class="kw">PHP_VERSION</span>,
-            <span class="str">'laravel_version'</span> => <span class="fn">app</span>()-><span class="fn">version</span>(),
-            <span class="str">'app_env'</span>         => <span class="fn">app</span>()-><span class="fn">environment</span>(),
-            <span class="str">'response_time'</span>   => <span class="var">120</span>,
-            <span class="str">'error_rate'</span>      => <span class="var">0.0</span>,
+        $errorCount = 0;
+        $logFile = storage_path('logs/laravel.log');
+        if (file_exists($logFile)) {
+            $recentLogs = shell_exec('tail -n 300 ' . escapeshellarg($logFile));
+            $errorCount = substr_count($recentLogs ?? '', 'local.ERROR');
+        }
+
+        $cacheStart = microtime(true);
+        try {
+            Cache::has('ping');
+            $cacheLatency = round((microtime(true) - $cacheStart) * 1000);
+        } catch (\Throwable $e) {
+            $cacheLatency = 0;
+        }
+
+        $metrics = [
+            'cpu_usage' => round(sys_getloadavg()[0] * 10, 1),
+            'memory_usage' => round(memory_get_usage(true) / 1048576, 1),
+            'disk_usage' => round((($diskTotal - $diskFree) / $diskTotal) * 100, 1),
+            'active_users' => \App\Models\User::count(),
+            'db_latency' => $dbLatency,
+            'cache_latency' => $cacheLatency,
+            'pending_jobs' => $pendingJobs,
+            'failed_jobs' => $failedJobs,
+            'error_count' => $errorCount,
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'app_env' => app()->environment(),
+            'response_time' => 120,
+            'error_rate' => 0.0,
         ];
 
-        <span class="kw">if</span> (<span class="fn">env</span>(<span class="str">'DASHBOARD_API_TOKEN'</span>)) {
-            Http::<span class="fn">withToken</span>(<span class="fn">env</span>(<span class="str">'DASHBOARD_API_TOKEN'</span>))
-                -><span class="fn">timeout</span>(<span class="var">3</span>)
-                -><span class="fn">post</span>(<span class="fn">env</span>(<span class="str">'DASHBOARD_MONITOR_URL'</span>) . <span class="str">'/api/metrics'</span>, <span class="var">$metrics</span>);
+        if (env('DASHBOARD_API_TOKEN') && env('DASHBOARD_MONITOR_URL')) {
+            Http::withToken(env('DASHBOARD_API_TOKEN'))
+                ->timeout(3)
+                ->post(rtrim(env('DASHBOARD_MONITOR_URL'), '/') . '/api/metrics', $metrics);
         }
-    }
-}</div>
 
-            <h4 style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem;">2. Schedule It</h4>
+        return self::SUCCESS;
+    }
+}
+PHP;
+            @endphp
+
+            <h4 style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem;">1. Configure .env</h4>
+            <p style="font-size: 0.8rem; color: #555; margin-bottom: 0.5rem;">Add these values to your application environment so the command can send metrics to the correct endpoint.</p>
+            <pre class="neo-code" style="margin-bottom: 1rem; white-space: pre-wrap; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, Monaco, monospace;">{{ $envExample }}</pre>
+
+            <h4 style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem;">2. Create the Command</h4>
+            <p style="font-size: 0.8rem; color: #555; margin-bottom: 0.5rem;">Run this in your terminal to generate the file:</p>
+            <pre class="neo-code" style="margin-bottom: 1rem; white-space: pre-wrap; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, Monaco, monospace;">php artisan make:command SendDashboardMetrics</pre>
+
+            <p style="font-size: 0.8rem; color: #555; margin-bottom: 0.5rem;">Then, paste this code into <code style="background: var(--butter); padding: 0.1rem 0.4rem; border-radius: 0.25rem; border: 1px solid var(--border); font-size: 0.75rem;">app/Console/Commands/SendDashboardMetrics.php</code>:</p>
+
+            <pre class="neo-code" style="max-height: 260px; overflow-y: auto; margin-bottom: 1rem; white-space: pre-wrap; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, Monaco, monospace;">{{ $commandExample }}</pre>
+
+            <h4 style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem;">3. Schedule It</h4>
             <p style="font-size: 0.8rem; color: #555; margin-bottom: 0.5rem;">Add just one line to your <code style="background: var(--butter); padding: 0.1rem 0.4rem; border-radius: 0.25rem; border: 1px solid var(--border); font-size: 0.75rem;">routes/console.php</code> (Laravel 11) or <code style="background: var(--butter); padding: 0.1rem 0.4rem; border-radius: 0.25rem; border: 1px solid var(--border); font-size: 0.75rem;">app/Console/Kernel.php</code> (Laravel 10):</p>
             <div class="neo-code">
 Schedule::<span class="fn">command</span>(<span class="str">'dashboard:send-metrics'</span>)-><span class="fn">everyMinute</span>();</div>

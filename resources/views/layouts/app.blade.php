@@ -314,11 +314,39 @@
     <div class="neo-main">
         <div class="neo-topbar">
             @isset($header) {{ $header }} @endisset
-            <div style="font-size: 0.75rem; color: #999;">{{ now()->format('D, d M Y') }}</div>
+            <div id="live-clock" style="font-size: 0.75rem; color: #999; min-width: 190px; text-align: right;"></div>
         </div>
         <div class="neo-page">
             {{ $slot }}
         </div>
     </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const clock = document.getElementById('live-clock');
+
+        if (!clock) {
+            return;
+        }
+
+        const updateClock = () => {
+            const now = new Date();
+            const formatted = new Intl.DateTimeFormat('en', {
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+            }).format(now);
+
+            clock.textContent = formatted.replace(',', '');
+        };
+
+        updateClock();
+        setInterval(updateClock, 1000);
+    });
+</script>
 </body>
 </html>

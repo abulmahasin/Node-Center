@@ -139,13 +139,10 @@
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Prepare Data
-                const rawMetrics = {!! json_encode($metrics->map(function($m) use ($range) {
-                    $timeFormat = 'H:i';
-                    if ($range === '7d') $timeFormat = 'D H:00';
-                    if ($range === '30d') $timeFormat = 'M d';
-
+                const range = '{{ $range }}';
+                const rawMetrics = {!! json_encode($metrics->map(function($m) {
                     return [
-                        'time' => $m->created_at->format($timeFormat),
+                        'timestamp' => $m->created_at->toIso8601String(),
                         'cpu' => round($m->cpu_usage, 2),
                         'mem' => round($m->memory_usage, 2),
                         'db' => round($m->db_latency, 2),
@@ -154,7 +151,30 @@
                     ];
                 })) !!};
 
-                const labels = rawMetrics.map(m => m.time);
+                const formatTimestamp = (timestamp) => {
+                    const dt = new Date(timestamp);
+                    if (range === '7d') {
+                        return new Intl.DateTimeFormat('en', {
+                            weekday: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                        }).format(dt);
+                    }
+                    if (range === '30d') {
+                        return new Intl.DateTimeFormat('en', {
+                            month: 'short',
+                            day: '2-digit',
+                        }).format(dt);
+                    }
+                    return new Intl.DateTimeFormat('en', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                    }).format(dt);
+                };
+
+                const labels = rawMetrics.map(m => formatTimestamp(m.timestamp));
                 
                 // Chart Defaults for Neo-Brutalist look
                 Chart.defaults.font.family = "'Space Grotesk', sans-serif";

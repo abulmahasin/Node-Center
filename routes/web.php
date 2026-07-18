@@ -11,7 +11,10 @@ Route::get('/dashboard', function () {
     $apps = auth()->user()->apps()->with(['metrics' => function($q) {
         $q->latest()->take(10);
     }])->get();
-    return view('dashboard', compact('apps'));
+
+    $healthScoringService = app(\App\Services\HealthScoringService::class);
+
+    return view('dashboard', compact('apps', 'healthScoringService'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('/documentation', function () {

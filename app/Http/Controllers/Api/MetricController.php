@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use App\Models\AlertLog;
 
 class MetricController extends Controller
 {
@@ -20,6 +22,42 @@ class MetricController extends Controller
         }
 
         $app = $accessToken->tokenable;
+
+        $safe = $request->only([
+            'response_time',
+            'cpu_usage',
+            'memory_usage',
+            'active_users',
+            'error_rate',
+            'error_count',
+            'db_latency',
+            'cache_latency',
+        ]);
+
+        Log::info('MetricController::store incoming metrics', [
+            'app_id' => $app->id ?? null,
+            'app_name' => $app->name ?? null,
+            'metrics' => $safe,
+            'ip' => $request->ip(),
+        ]);
+
+        // Also log full payload (sanitized): mask common sensitive keys
+        try {
+            $raw = $request->all();
+            $sensitiveKeys = ['password', 'token', 'api_key', 'apiKey', 'authorization'];
+            $sanitized = $raw;
+            foreach ($sensitiveKeys as $k) {
+                if (array_key_exists($k, $sanitized)) {
+                    $sanitized[$k] = '***masked***';
+                }
+            }
+            Log::info('MetricController::store raw payload (sanitized)', [
+                'app_id' => $app->id ?? null,
+                'payload' => $sanitized,
+            ]);
+        } catch (\Throwable $e) {
+            // ignore logging errors
+        }
 
         $validated = $request->validate([
             'cpu_usage' => 'required|numeric',
@@ -43,8 +81,42 @@ class MetricController extends Controller
             'security_warnings' => 'nullable|array',
         ]);
 
+        // Prefer sender's summary if provided (more authoritative)
+        $summary = $request->input('response_metrics_summary', null);
+        if (is_array($summary)) {
+            $preferred = isset($summary['recent_average_ms']) ? (float) $summary['recent_average_ms'] : (isset($summary['average_ms']) ? (float) $summary['average_ms'] : null);
+            if ($preferred !== null && $preferred > 0) {
+                if (isset($validated['response_time']) && abs($validated['response_time'] - $preferred) > 0.1) {
+                    Log::info('MetricController::store overriding response_time with sender summary', ['app_id' => $app->id, 'original' => $validated['response_time'], 'preferred' => $preferred]);
+                }
+                $validated['response_time'] = $preferred;
+            }
+        }
+
         $app->update(['status' => 'online']);
         $metric = $app->metrics()->create($validated);
+
+        // Detect suspicious constant response_time values (e.g. many 120ms entries)
+        $rt = isset($validated['response_time']) ? (float) $validated['response_time'] : null;
+        if ($rt !== null && abs($rt - 120) < 0.001) {
+            Log::warning('MetricController::store detected response_time == 120', [
+                'app_id' => $app->id,
+                'response_time' => $rt,
+                'metrics_snapshot' => $safe,
+            ]);
+
+            try {
+                AlertLog::create([
+                    'monitored_app_id' => $app->id,
+                    'channel' => 'internal',
+                    'type' => 'anomaly_response_time',
+                    'message' => 'Detected repeated response_time == 120 in incoming metrics',
+                    'status' => 'detected',
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Failed to create AlertLog for response_time anomaly', ['error' => $e->getMessage()]);
+            }
+        }
 
         return response()->json([
             'status' => 'success',

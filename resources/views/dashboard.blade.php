@@ -15,11 +15,44 @@
             this.modalOpen = true;
         }
     }">
-        <!-- Stats -->
         @php
             $onlineCount = $apps->filter(function($a) { $m = $a->metrics->first(); return $m && $m->created_at->diffInMinutes(now()) <= 5; })->count();
             $offlineCount = $apps->count() - $onlineCount;
+
+            $healthyCount = $apps->filter(function($a) use ($healthScoringService) {
+                $m = $a->metrics->first();
+                if (!$m) {
+                    return false;
+                }
+
+                $result = $healthScoringService->evaluate([
+                    'is_fresh' => $m->created_at && $m->created_at->diffInMinutes(now()) <= (int) (\App\Models\Setting::get('health_fresh_window_minutes', 5) ?? 5),
+                    'response_time' => (float) ($m->response_time ?? 0),
+                    'cpu_usage' => (float) ($m->cpu_usage ?? 0),
+                    'memory_usage' => (float) ($m->memory_usage ?? 0),
+                    'error_count' => (int) ($m->error_count ?? 0),
+                    'failed_jobs' => (int) ($m->failed_jobs ?? 0),
+                    'db_latency' => (float) ($m->db_latency ?? 0),
+                    'cache_latency' => (float) ($m->cache_latency ?? 0),
+                ]);
+
+                return $result['score'] >= 75;
+            })->count();
         @endphp
+
+        <div class="neo-card" style="margin-bottom: 1.25rem; padding: 1.2rem 1.3rem; background: linear-gradient(135deg, var(--lavender), var(--butter));">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div>
+                    <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280;">System Overview</div>
+                    <h3 style="font-size: 1.15rem; font-weight: 800; margin-top: 0.2rem;">Monitoring status is live and updated in real time.</h3>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="neo-badge neo-badge-online">🟢 Live · 15s refresh</span>
+                    <span class="neo-badge" style="background: var(--sky);">⚙️ {{ $healthyCount }} healthy apps</span>
+                </div>
+            </div>
+        </div>
+
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
             <div class="neo-stat">
                 <div class="neo-stat-icon" style="background: var(--sky);">📦</div>
@@ -33,14 +66,17 @@
                 <div class="neo-stat-icon" style="background: var(--pink);">⚠️</div>
                 <div><div class="neo-stat-val" style="color: #dc2626;">{{ $offlineCount }}</div><div class="neo-stat-label">Offline</div></div>
             </div>
+            <div class="neo-stat">
+                <div class="neo-stat-icon" style="background: var(--butter);">🧠</div>
+                <div><div class="neo-stat-val" style="color: #7c3aed;">{{ $healthyCount }}</div><div class="neo-stat-label">Healthy</div></div>
+            </div>
         </div>
 
-        <!-- Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="font-size: 1rem; font-weight: 700;">Monitored Applications</h3>
-            <div style="display: flex; align-items: center; gap: 0.4rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <h3 style="font-size: 1rem; font-weight: 800;">Monitored Applications</h3>
+            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
                 <span class="neo-dot neo-dot-green"></span>
-                <span style="font-size: 0.7rem; color: #888; font-weight: 600;">Live · 15s refresh</span>
+                <span style="font-size: 0.72rem; color: #666; font-weight: 700;">Live · auto refresh every 15s</span>
             </div>
         </div>
 
@@ -59,9 +95,29 @@
                             $m = $app->metrics->first();
                             $isOnline = $app->status === 'online';
                             $isAgentStale = $m ? $m->created_at->diffInMinutes(now()) > 5 : true;
+
+                            $healthScore = 0;
+                            $healthLabel = 'Critical';
+                            $healthColor = '#dc2626';
+                            if ($m) {
+                                $healthEvaluation = $healthScoringService->evaluate([
+                                    'is_fresh' => $m->created_at && $m->created_at->diffInMinutes(now()) <= (int) (\App\Models\Setting::get('health_fresh_window_minutes', 5) ?? 5),
+                                    'response_time' => (float) ($m->response_time ?? 0),
+                                    'cpu_usage' => (float) ($m->cpu_usage ?? 0),
+                                    'memory_usage' => (float) ($m->memory_usage ?? 0),
+                                    'error_count' => (int) ($m->error_count ?? 0),
+                                    'failed_jobs' => (int) ($m->failed_jobs ?? 0),
+                                    'db_latency' => (float) ($m->db_latency ?? 0),
+                                    'cache_latency' => (float) ($m->cache_latency ?? 0),
+                                ]);
+
+                                $healthScore = $healthEvaluation['score'];
+                                $healthLabel = $healthEvaluation['label'];
+                                $healthColor = $healthEvaluation['color'];
+                            }
                         @endphp
-                        <div class="neo-card" style="border-left: 6px solid {{ $isOnline ? '#22c55e' : '#ef4444' }}; padding: 1.5rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+                        <div class="neo-card" style="border-left: 6px solid {{ $isOnline ? '#22c55e' : '#ef4444' }}; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.9rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap;">
                                 <div>
                                     <h4 style="font-weight: 800; font-size: 1.05rem;">
                                         <a href="{{ route('apps.show', $app->id) }}" style="text-decoration: none; color: inherit;" onmouseover="this.style.textDecoration='underline';" onmouseout="this.style.textDecoration='none';">
@@ -72,67 +128,64 @@
                                         @endif
                                     </h4>
                                     <a href="{{ $app->url }}" target="_blank" style="font-size: 0.75rem; color: #888; text-decoration: none;">{{ $app->url }}</a>
-                                    <p style="font-size: 0.8rem; color: #666; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                                        {{ $app->type ?? 'General App' }}
-                                        
-                                        @if(!$isOnline)
-                                            <span class="neo-badge neo-badge-offline">AGENT OFFLINE</span>
-                                        @elseif($isAgentStale)
-                                            <span class="neo-badge" style="background: var(--butter); color: #854d0e;">AGENT STALE</span>
-                                        @else
-                                            <span class="neo-badge neo-badge-online">AGENT ONLINE</span>
-                                        @endif
-                                        
-                                        <!-- Active Ping Status -->
-                                        @if($app->ping_status === 'up')
-                                            <span class="neo-badge" style="background: var(--mint); color: #166534; border-color: #16a34a;" title="Last checked: {{ $app->last_active_ping_at?->diffForHumans() }}">
-                                                <span class="neo-dot neo-dot-green" style="margin-right: 4px;"></span> UP ({{ $app->ping_response_time }}ms)
-                                            </span>
-                                        @elseif($app->ping_status === 'down')
-                                            <span class="neo-badge" style="background: var(--pink); color: #9f1239; border-color: #be123c;" title="Error: {{ $app->ping_error }}">
-                                                <span class="neo-dot neo-dot-red" style="margin-right: 4px;"></span> DOWN
-                                            </span>
-                                        @else
-                                            <span class="neo-badge" style="background: #e5e7eb; color: #4b5563;">PING: UNKNOWN</span>
-                                        @endif
-                                        
-                                        <!-- Manual Ping Button -->
-                                        <form method="POST" action="{{ route('apps.ping', $app->id) }}" style="display:inline;">
-                                            @csrf
-                                            <button type="submit" class="neo-btn neo-btn-sm" style="background: var(--card-alt); padding: 0.15rem 0.5rem; font-size: 0.65rem;" title="Test Ping Now">
-                                                🔄 Ping
-                                            </button>
-                                        </form>
-
-                                        <!-- SSL Status -->
-                                        @if($app->ssl_expires_at)
-                                            @php
-                                                $sslExpiry = \Carbon\Carbon::parse($app->ssl_expires_at);
-                                                $daysLeft = (int) now()->diffInDays($sslExpiry, false);
-                                            @endphp
-                                            @if($daysLeft < 0)
-                                                <span class="neo-badge" style="background: var(--pink); color: #9f1239; border-color: #be123c;" title="SSL Expired: {{ $sslExpiry->format('d M Y') }}">🔒 EXPIRED</span>
-                                            @elseif($daysLeft <= 7)
-                                                <span class="neo-badge" style="background: var(--butter); color: #854d0e; border-color: #ca8a04;" title="SSL Expiring: {{ $sslExpiry->format('d M Y') }}">🔒 SSL : {{ $daysLeft }} days left!</span>
-                                            @elseif($daysLeft <= 30)
-                                                <span class="neo-badge" style="background: var(--butter); color: #854d0e; border-color: #ca8a04;" title="SSL Valid: {{ $sslExpiry->format('d M Y') }} ({{ $app->ssl_issuer }})">🔒 SSL : {{ $daysLeft }} days</span>
-                                            @else
-                                                <span class="neo-badge" style="background: var(--mint); color: #166534; border-color: #16a34a;" title="SSL Valid: {{ $sslExpiry->format('d M Y') }} ({{ $app->ssl_issuer }})">🔒 SSL : {{ $daysLeft }} days</span>
-                                            @endif
-                                        @endif
-                                    </p>
                                 </div>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    @if($m && isset($m->security_warnings) && count($m->security_warnings) > 0)
-                                        <button @click="openModal('Security Check', 'security', {{ json_encode($m->security_warnings) }})" 
-                                                class="neo-btn" style="background: var(--pink); border-color: #be123c; padding: 0.4rem 0.6rem; color: #9f1239; box-shadow: 2px 2px 0 #be123c;" 
-                                                title="Security Issues Detected">
-                                            🛡️ {{ count($m->security_warnings) }} Warnings
-                                        </button>
-                                    @elseif($m)
-                                        <div class="neo-badge" style="background: var(--mint); color: #166534; padding: 0.5rem 0.75rem;">🛡️ Secured</div>
+                                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
+                                    @if(!$isOnline)
+                                        <span class="neo-badge neo-badge-offline">AGENT OFFLINE</span>
+                                    @elseif($isAgentStale)
+                                        <span class="neo-badge" style="background: var(--butter); color: #854d0e;">AGENT STALE</span>
+                                    @else
+                                        <span class="neo-badge neo-badge-online">AGENT ONLINE</span>
                                     @endif
+
+                                    @if($app->ping_status === 'up')
+                                        <span class="neo-badge" style="background: var(--mint); color: #166534; border-color: #16a34a;" title="Last checked: {{ $app->last_active_ping_at?->diffForHumans() }}">
+                                            <span class="neo-dot neo-dot-green" style="margin-right: 4px;"></span> UP ({{ $app->ping_response_time }}ms)
+                                        </span>
+                                    @elseif($app->ping_status === 'down')
+                                        <span class="neo-badge" style="background: var(--pink); color: #9f1239; border-color: #be123c;" title="Error: {{ $app->ping_error }}">
+                                            <span class="neo-dot neo-dot-red" style="margin-right: 4px;"></span> DOWN
+                                        </span>
+                                    @else
+                                        <span class="neo-badge" style="background: #e5e7eb; color: #4b5563;">PING: UNKNOWN</span>
+                                    @endif
+
+                                    <form method="POST" action="{{ route('apps.ping', $app->id) }}" style="display:inline;">
+                                        @csrf
+                                        <button type="submit" class="neo-btn neo-btn-sm" style="background: var(--card-alt); padding: 0.15rem 0.5rem; font-size: 0.65rem;" title="Test Ping Now">
+                                            🔄 Ping
+                                        </button>
+                                    </form>
                                 </div>
+                            </div>
+
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center;">
+                                <span style="font-size: 0.78rem; color: #666; font-weight: 700;">{{ $app->type ?? 'General App' }}</span>
+                                @if($app->ssl_expires_at)
+                                    @php
+                                        $sslExpiry = \Carbon\Carbon::parse($app->ssl_expires_at);
+                                        $daysLeft = (int) now()->diffInDays($sslExpiry, false);
+                                    @endphp
+                                    @if($daysLeft < 0)
+                                        <span class="neo-badge" style="background: var(--pink); color: #9f1239; border-color: #be123c;" title="SSL Expired: {{ $sslExpiry->format('d M Y') }}">🔒 EXPIRED</span>
+                                    @elseif($daysLeft <= 7)
+                                        <span class="neo-badge" style="background: var(--butter); color: #854d0e; border-color: #ca8a04;" title="SSL Expiring: {{ $sslExpiry->format('d M Y') }}">🔒 SSL : {{ $daysLeft }} days left!</span>
+                                    @elseif($daysLeft <= 30)
+                                        <span class="neo-badge" style="background: var(--butter); color: #854d0e; border-color: #ca8a04;" title="SSL Valid: {{ $sslExpiry->format('d M Y') }} ({{ $app->ssl_issuer }})">🔒 SSL : {{ $daysLeft }} days</span>
+                                    @else
+                                        <span class="neo-badge" style="background: var(--mint); color: #166534; border-color: #16a34a;" title="SSL Valid: {{ $sslExpiry->format('d M Y') }} ({{ $app->ssl_issuer }})">🔒 SSL : {{ $daysLeft }} days</span>
+                                    @endif
+                                @endif
+                                @if($m && isset($m->security_warnings) && count($m->security_warnings) > 0)
+                                    <button @click="openModal('Security Check', 'security', {{ json_encode($m->security_warnings) }})" 
+                                            class="neo-btn neo-btn-sm" style="background: var(--pink); border-color: #be123c; padding: 0.35rem 0.6rem; color: #9f1239; box-shadow: 2px 2px 0 #be123c;" 
+                                            title="Security Issues Detected">
+                                        🛡️ {{ count($m->security_warnings) }} Warnings
+                                    </button>
+                                @elseif($m)
+                                    <span class="neo-badge" style="background: var(--mint); color: #166534; padding: 0.5rem 0.75rem;">🛡️ Secured</span>
+                                @endif
+                                <span class="neo-badge" style="background: {{ $healthColor }}; color: white;">{{ $healthLabel }} · {{ $healthScore }}/100</span>
                             </div>
 
                             @if($m)
@@ -144,22 +197,20 @@
                                 </div>
                                 @endif
 
-                                <!-- Server Resources -->
-                                <div style="font-size: 0.7rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Server Resources</div>
-                                <div class="neo-metric"><span class="neo-metric-label">🔥 CPU Usage</span><span class="neo-metric-value" style="color: {{ $m->cpu_usage > 80 ? '#dc2626' : ($m->cpu_usage > 60 ? '#d97706' : '#16a34a') }}">{{ number_format($m->cpu_usage, 1) }}%</span></div>
-                                <div class="neo-metric"><span class="neo-metric-label">💾 Memory Usage</span><span class="neo-metric-value" style="color: {{ $m->memory_usage > 80 ? '#dc2626' : ($m->memory_usage > 60 ? '#d97706' : '#16a34a') }}">{{ number_format($m->memory_usage, 1) }} MB</span></div>
-                                <div class="neo-metric"><span class="neo-metric-label">💽 Disk Space Used</span><span class="neo-metric-value" style="color: {{ $m->disk_usage > 90 ? '#dc2626' : ($m->disk_usage > 75 ? '#d97706' : '#16a34a') }}">{{ number_format($m->disk_usage, 1) }}%</span></div>
+                                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem;">
+                                    <div class="neo-metric" style="margin-bottom: 0;"><span class="neo-metric-label">🔥 CPU</span><span class="neo-metric-value" style="color: {{ $m->cpu_usage > 80 ? '#dc2626' : ($m->cpu_usage > 60 ? '#d97706' : '#16a34a') }}">{{ number_format($m->cpu_usage, 1) }}%</span></div>
+                                    <div class="neo-metric" style="margin-bottom: 0;"><span class="neo-metric-label">🧠 RAM</span><span class="neo-metric-value" style="color: {{ $m->memory_usage > 80 ? '#dc2626' : ($m->memory_usage > 60 ? '#d97706' : '#16a34a') }}">{{ number_format($m->memory_usage, 1) }} MB</span></div>
+                                    <div class="neo-metric" style="margin-bottom: 0;"><span class="neo-metric-label">💽 Disk</span><span class="neo-metric-value" style="color: {{ $m->disk_usage > 90 ? '#dc2626' : ($m->disk_usage > 75 ? '#d97706' : '#16a34a') }}">{{ number_format($m->disk_usage, 1) }}%</span></div>
+                                    <div class="neo-metric" style="margin-bottom: 0;"><span class="neo-metric-label">👥 Users</span><span class="neo-metric-value" style="color: #6C63FF;">{{ number_format($m->active_users) }}</span></div>
+                                </div>
 
-                                <!-- Application Health -->
-                                <div style="font-size: 0.7rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin: 1rem 0 0.5rem 0;">Application Health</div>
-                                <div class="neo-metric"><span class="neo-metric-label">👥 Active Users</span><span class="neo-metric-value" style="color: #6C63FF;">{{ number_format($m->active_users) }}</span></div>
-                                
+                                <div style="font-size: 0.7rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin: 0.35rem 0 0.35rem 0;">Performance & Reliability</div>
                                 @if(isset($m->db_latency))
                                 <div class="neo-metric" style="cursor: pointer; transition: all 0.1s;" 
                                      @click="openModal('Slow Queries Log', 'slow_query', {{ json_encode($m->slow_queries ?? []) }})"
                                      onmouseover="this.style.background='var(--butter)'; this.style.borderColor='var(--border)';" 
-                                     onmouseout="this.style.background='#fafafa';">
-                                    <span class="neo-metric-label">🗄️ DB Latency (Slow Queries 🔍)</span>
+                                     onmouseout="this.style.background='var(--card-alt)';">
+                                    <span class="neo-metric-label">🗄️ DB Latency</span>
                                     <span class="neo-metric-value" style="color: {{ $m->db_latency > 500 ? '#dc2626' : ($m->db_latency > 200 ? '#d97706' : '#16a34a') }}">{{ number_format($m->db_latency) }} ms</span>
                                 </div>
                                 @endif
@@ -168,10 +219,9 @@
                                 <div class="neo-metric"><span class="neo-metric-label">⚡ Cache Latency</span><span class="neo-metric-value" style="color: {{ $m->cache_latency > 100 ? '#dc2626' : ($m->cache_latency > 50 ? '#d97706' : '#16a34a') }}">{{ number_format($m->cache_latency) }} ms</span></div>
                                 @endif
                                 
-                                <div class="neo-metric"><span class="neo-metric-label">🌐 API Response</span><span class="neo-metric-value">{{ number_format($m->response_time, 1) }} ms</span></div>
+                                <div class="neo-metric"><span class="neo-metric-label">🌐 API Response</span><span class="neo-metric-value" style="color: {{ ($m->response_time ?? 0) > 800 ? '#dc2626' : (($m->response_time ?? 0) > 400 ? '#d97706' : '#16a34a') }}">{{ number_format($m->response_time, 1) }} ms</span></div>
 
-                                <!-- Background Jobs & Errors (Clickable) -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem;">
                                     @if(isset($m->pending_jobs))
                                     <div @click="openModal('Queue Jobs Details', 'queue', {{ json_encode($m->queue_details ?? []) }})" 
                                          style="background: var(--bg); border: 2px solid var(--border); border-radius: 0.5rem; padding: 0.75rem; text-align: center; cursor: pointer; transition: all 0.15s;" 
@@ -205,7 +255,14 @@
                                 </button>
                                 @endif
 
-                                <p style="font-size: 0.65rem; color: #aaa; margin-top: 1rem; text-align: right;">Updated {{ $m->created_at->diffForHumans() }}</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.35rem;">
+                                    @if($m->created_at)
+                                        <span style="font-size: 0.65rem; color: #888; font-weight: 700;">Updated {{ $m->created_at->diffForHumans() }}</span>
+                                    @endif
+                                    @if(isset($m->response_metrics_summary))
+                                        <span class="neo-badge" style="background: var(--sky); color: #1d4ed8;">Perf: {{ round($m->response_metrics_summary['average_ms'] ?? 0, 1) }} ms</span>
+                                    @endif
+                                </div>
                             @else
                                 <div style="text-align: center; padding: 2rem 0;">
                                     <div style="font-size: 2rem; margin-bottom: 0.75rem;">⏳</div>
