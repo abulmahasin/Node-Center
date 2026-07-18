@@ -96,6 +96,10 @@ class SendDashboardMetrics extends Command
             $cpuUsage = sys_getloadavg()[0] * 10;
         }
 
+        // Perhitungan response time dinamis
+        $history = Cache::get('response_times', []);
+        $avgResponseTime = !empty($history) ? array_sum($history) / count($history) : 0;
+
         $metrics = [
             'cpu_usage'       => $cpuUsage,
             'memory_usage'    => round(memory_get_usage(true) / 1048576, 1),
@@ -114,7 +118,7 @@ class SendDashboardMetrics extends Command
             'schedule_details'=> $scheduleDetails,
             'slow_queries'    => $slowQueries,
             'security_warnings' => $securityWarnings,
-            'response_time'   => 120,
+            'response_time'   => round($avgResponseTime, 2),
             'error_rate'      => 0.0,
         ];
 
